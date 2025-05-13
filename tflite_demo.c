@@ -13,24 +13,24 @@
 void print_tensor_info(const TfLiteTensor* tensor) {
   	size_t tensor_size = TfLiteTensorByteSize(tensor);
 
-	printf("INFO: Size: %lu bytes\n", tensor_size);
+	printf("INFO:   Size: %lu bytes\n", tensor_size);
 
 	int num_dims = TfLiteTensorNumDims(tensor);
 
-	printf("INFO: Dimension: ");
+	printf("INFO:   Dimension: ");
 
-	for (int i = 0; i < num_dims; i++) printf("%d ", TfLiteTensorDim(tensor, i));
+	for (int i = 0; i < num_dims; i++) printf("%d%s", TfLiteTensorDim(tensor, i), i == num_dims - 1 ? "" : "x");
 
 	printf("\n");
 
 	switch (TfLiteTensorType(tensor)) {
-		case kTfLiteFloat16: printf("INFO: Type: f16\n"); break;
-		case kTfLiteFloat32: printf("INFO: Type: f32\n"); break;
-		case kTfLiteUInt8:   printf("INFO: Type: u8 \n"); break;
-		case kTfLiteUInt32:  printf("INFO: Type: u32\n"); break;
-		case kTfLiteInt8:    printf("INFO: Type: i8 \n"); break;
-		case kTfLiteInt32:   printf("INFO: Type: i32\n"); break;
-		default:             printf("INFO: Type: ???\n"); break;
+		case kTfLiteFloat16: printf("INFO:   Type: f16\n"); break;
+		case kTfLiteFloat32: printf("INFO:   Type: f32\n"); break;
+		case kTfLiteUInt8:   printf("INFO:   Type: u8 \n"); break;
+		case kTfLiteUInt32:  printf("INFO:   Type: u32\n"); break;
+		case kTfLiteInt8:    printf("INFO:   Type: i8 \n"); break;
+		case kTfLiteInt32:   printf("INFO:   Type: i32\n"); break;
+		default:             printf("INFO:   Type: ???\n"); break;
 	}
 }
 
@@ -122,12 +122,19 @@ int main(int argc, char** argv) {
 
 	stbi_image_free(image);
 
+	printf("INFO: Invoking interpreter...\n");
+
 	if (TfLiteInterpreterInvoke(interpreter) != 0) {
 		printf("Model execution failed\n");
 		goto defer;
 	}
 
 	unsigned int n_tensors_out = TfLiteInterpreterGetOutputTensorCount(interpreter);
+
+	if (n_tensors_out != 1) {
+		printf("Only one output tensor is supported");
+		goto defer;
+	}
 
 	for (unsigned int idx = 0; idx < n_tensors_out; ++idx) {
 		const TfLiteTensor* tensor = TfLiteInterpreterGetOutputTensor(interpreter, idx);
