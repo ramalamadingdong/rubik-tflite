@@ -8,8 +8,7 @@
 #include <tensorflow/lite/version.h>
 #include <tensorflow/lite/c/c_api.h>
 #include <tensorflow/lite/c/c_api_experimental.h>
-
-#include "TFLiteDelegate/QnnTFLiteDelegate.h"
+#include <tensorflow/lite/delegates/external/external_delegate.h>
 
 void print_tensor_info(const TfLiteTensor* tensor) {
   	size_t tensor_size = TfLiteTensorByteSize(tensor);
@@ -56,15 +55,19 @@ int main(int argc, char** argv) {
 
 	printf("INFO: Loaded model file '%s'\n", argv[1]);
 
-	TfLiteQnnDelegateOptions delegateOpts = TfLiteQnnDelegateOptionsDefault();
-	delegateOpts.backend_type = kHtpBackend;
+	TfLiteExternalDelegateOptions delegateOpts = TfLiteExternalDelegateOptionsDefault("libQnnTFLiteDelegate.so");
+	TfLiteExternalDelegateOptionsInsert(&delegateOpts, "backend_type", "htp");
 
-	if ((delegate = TfLiteQnnDelegateCreate(&delegateOpts)) == NULL) {
+	if ((delegate = TfLiteExternalDelegateCreate(&delegateOpts)) == NULL) {
 		printf("ERROR: Failed to create delegate\n");
 		goto defer;
 	}
 
+	printf("INFO: Loaded external delegate\n");
+
 	TfLiteInterpreterOptions* interpreterOpts = TfLiteInterpreterOptionsCreate();
+
+	TfLiteInterpreterOptionsAddDelegate(interpreterOpts, delegate);
 
 	if ((interpreter = TfLiteInterpreterCreate(model, interpreterOpts)) == NULL) {
 		printf("ERROR: Failed to create interpreter\n");
@@ -72,7 +75,6 @@ int main(int argc, char** argv) {
 		goto defer;
 	}
 
-	TfLiteInterpreterOptionsAddDelegate(interpreterOpts, delegate);
 	TfLiteInterpreterOptionsDelete(interpreterOpts);
 
 	if (TfLiteInterpreterModifyGraphWithDelegate(interpreter, delegate) != kTfLiteOk) {
@@ -147,7 +149,7 @@ int main(int argc, char** argv) {
 
 	result = 0;
 defer:
-	if (delegate != NULL)    TfLiteQnnDelegateDelete(delegate);
+	if (delegate != NULL)    TfLiteExternalDelegateDelete(delegate);
 	if (model != NULL)       TfLiteModelDelete(model);
 	if (interpreter != NULL) TfLiteInterpreterDelete(interpreter);
 

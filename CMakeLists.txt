@@ -22,7 +22,7 @@ if(NOT TFLITE_FOUND)
   pkg_check_modules(TFLITE REQUIRED tensorflow-lite)
 endif()
 
-list(APPEND TARGET_LIBRARIES ${TFLITE_LIBRARIES} QnnTFLiteDelegate m)
+list(APPEND TARGET_LIBRARIES ${TFLITE_LIBRARIES} m)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
