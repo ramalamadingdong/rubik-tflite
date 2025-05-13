@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -9,6 +10,34 @@
 #include <tensorflow/lite/c/c_api.h>
 #include <tensorflow/lite/c/c_api_experimental.h>
 #include <tensorflow/lite/delegates/external/external_delegate.h>
+
+// Guesses the width, height, and channels of a tensor if it were an image. Returns false on failure.
+bool tensor_image_dims(const TfLiteTensor* tensor, int* w, int* h, int* c) {
+	int n = TfLiteTensorNumDims(tensor);
+	int cursor = 0;
+
+	for (int i = 0; i < n; i++) {
+		int dim = TfLiteTensorDim(tensor, i);
+		if (dim == 0) return false;
+		if (dim == 1) continue;
+
+		switch (cursor++) {
+			case 0: if(w) *w = dim; break;
+			case 1: if(h) *h = dim; break;
+			case 2: if(c) *c = dim; break;
+			default: return false;  break;
+		}
+	}
+
+	// Ensure that we at least have the width and height.
+	if (cursor < 2) return false;
+	// If we don't have the number of channels, then assume there's only one.
+	if (cursor == 2 && c) *c = 1;
+	// Ensure we have no more than 4 image channels.
+	if (*c > 4) return false;
+	// The tensor dimension appears coherent.
+	return true;
+}
 
 void print_tensor_info(const TfLiteTensor* tensor) {
   	size_t tensor_size = TfLiteTensorByteSize(tensor);
@@ -44,16 +73,23 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	const char* arg_model = argv[1];
+	const char* arg_input = argv[2];
+	const char* arg_output = argv[3];
+
 	TfLiteModel* model = NULL;
 	TfLiteDelegate* delegate = NULL;
 	TfLiteInterpreter* interpreter = NULL;
+	unsigned char* image = NULL;
 
-	if ((model = TfLiteModelCreateFromFile(argv[1])) == NULL) {
-		printf("ERROR: Failed to load model file '%s'\n", argv[1]);
+	/* Setup the interpreter. */
+
+	if ((model = TfLiteModelCreateFromFile(arg_model)) == NULL) {
+		printf("ERROR: Failed to load model file '%s'\n", arg_model);
 		goto defer;
 	}
 
-	printf("INFO: Loaded model file '%s'\n", argv[1]);
+	printf("INFO: Loaded model file '%s'\n", arg_model);
 
 	TfLiteExternalDelegateOptions delegateOpts = TfLiteExternalDelegateOptionsDefault("libQnnTFLiteDelegate.so");
 	TfLiteExternalDelegateOptionsInsert(&delegateOpts, "backend_type", "htp");
@@ -87,78 +123,110 @@ int main(int argc, char** argv) {
 		goto defer;
 	}
 
+	/* Get the tensor info. */
+
+	// Input:
+
 	unsigned int n_tensors_in = TfLiteInterpreterGetInputTensorCount(interpreter);
 
 	if (n_tensors_in != 1) {
-		printf("Only one input tensor is supported");
+		printf("ERROR: expected only 1 input tensor, got %d\n", n_tensors_in);
 		goto defer;
 	}
 
-	int x, y;
-	unsigned char* image = stbi_load(argv[2], &x, &y, NULL, 3);
-	size_t image_size = x * y * 3;
+	TfLiteTensor* input = TfLiteInterpreterGetInputTensor(interpreter, 0);
 
-	if (image == NULL) {
-		printf("ERROR: Failed to open image '%s'\n", argv[2]);
+	printf("INFO: Input tensor:\n");
+	print_tensor_info(input);
+
+	int in_w, in_h, in_c;
+
+	if (!tensor_image_dims(input, &in_w, &in_h, &in_c)) {
+		printf("ERROR: failed to extract image dimensions of input tensor.\n");
 		goto defer;
 	}
 
-	for (unsigned int idx = 0; idx < n_tensors_in; ++idx) {
-		TfLiteTensor* tensor = TfLiteInterpreterGetInputTensor(interpreter, idx);
+	printf("INFO: input tensor image dimensions: %dx%d, with %d channels\n", in_w, in_h, in_c);
 
-		printf("INFO: Input tensor %d:\n", idx);
-		print_tensor_info(tensor);
-
-		size_t tensor_size = TfLiteTensorByteSize(tensor);
-
-		if (tensor_size != image_size) {
-			printf("ERROR: tensor and input data size does not match");
-			stbi_image_free(image);
-			goto defer;
-		}
-
-		memcpy(TfLiteTensorData(tensor), image, tensor_size);
-	}
-
-	stbi_image_free(image);
-
-	printf("INFO: Invoking interpreter...\n");
-
-	if (TfLiteInterpreterInvoke(interpreter) != 0) {
-		printf("Model execution failed\n");
-		goto defer;
-	}
+	// Output:
 
 	unsigned int n_tensors_out = TfLiteInterpreterGetOutputTensorCount(interpreter);
 
 	if (n_tensors_out != 1) {
-		printf("Only one output tensor is supported");
+		printf("ERROR: expected only 1 output tensor, got %d\n", n_tensors_out);
 		goto defer;
 	}
 
-	for (unsigned int idx = 0; idx < n_tensors_out; ++idx) {
-		const TfLiteTensor* tensor = TfLiteInterpreterGetOutputTensor(interpreter, idx);
+	const TfLiteTensor* output = TfLiteInterpreterGetOutputTensor(interpreter, 0);
 
-		printf("INFO: Output tensor %d:\n", idx);
-		print_tensor_info(tensor);
+	printf("INFO: Output tensor:\n");
+	print_tensor_info(output);
 
-		size_t tensor_size = TfLiteTensorByteSize(tensor);
+	int out_w, out_h, out_c;
 
-		int dim = sqrt(tensor_size / 3);
-
-		int res = stbi_write_png(argv[3], dim, dim, 3, TfLiteTensorData(tensor), dim * 3);
-
-		if (res == 0) {
-			printf("Failed to write to '%s'\n", argv[3]);
-			goto defer;
-		}
+	if (!tensor_image_dims(output, &out_w, &out_h, &out_c)) {
+		printf("ERROR: failed to extract image dimensions of output tensor.\n");
+		goto defer;
 	}
+
+	printf("INFO: output tensor image dimensions: %dx%d, with %d channels\n", out_w, out_h, out_c);
+
+	/* Load the input. */
+
+	int w, h;
+	image = stbi_load(arg_input, &w, &h, NULL, in_c);
+
+	if (image == NULL) {
+		printf("ERROR: failed to open image '%s'\n", arg_input);
+		goto defer;
+	}
+
+	if (in_w != w || in_h != h) {
+		printf("ERROR: input image %s does not match dimension of input tensor: expected %dx%d, got %dx%d\n", arg_input, in_w, in_h, w, h);
+		goto defer;
+	}
+
+	printf("INFO: loaded input image '%s'\n", arg_input);
+
+	// If the dimension and channels match, the byte size of the input and the tensor should be identical.
+	size_t image_size = w * h * in_c;
+	size_t tensor_size = TfLiteTensorByteSize(input);
+	assert(tensor_size == image_size);
+
+	// Write the input data into the tensor.
+	memcpy(TfLiteTensorData(input), image, tensor_size);
+	// Free the input, now that we've copied it over.
+	stbi_image_free(image);
+	image = NULL;
+
+	/* Execute the model. */
+
+	printf("INFO: Invoking interpreter...\n");
+
+	if (TfLiteInterpreterInvoke(interpreter) != 0) {
+		printf("ERROR: Model execution failed\n");
+		goto defer;
+	}
+
+	/* Save the output. */
+
+	int res = stbi_write_png(arg_output, out_w, out_h, out_c, TfLiteTensorData(output), out_w * out_c);
+
+	if (res == 0) {
+		printf("ERROR: Failed to write output to '%s'\n", arg_output);
+		goto defer;
+	}
+
+	printf("INFO: wrote output image to '%s'\n", arg_output);
+
+	/* Free our resources. */
 
 	result = 0;
 defer:
 	if (delegate != NULL)    TfLiteExternalDelegateDelete(delegate);
 	if (model != NULL)       TfLiteModelDelete(model);
 	if (interpreter != NULL) TfLiteInterpreterDelete(interpreter);
+	if (image != NULL)       stbi_image_free(image);
 
 	return result;
 }
