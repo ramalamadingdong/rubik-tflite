@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8.2...3.31)
 project(TFLITE_DEMO
   VERSION 1.0
-  LANGUAGES C CXX
+  LANGUAGES C
 )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
