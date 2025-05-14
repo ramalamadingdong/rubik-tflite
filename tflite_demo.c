@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <time.h> // Add this for timing
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -203,10 +204,21 @@ int main(int argc, char** argv) {
 
 	printf("INFO: Invoking interpreter...\n");
 
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start); // Start timing
+
 	if (TfLiteInterpreterInvoke(interpreter) != 0) {
 		printf("ERROR: Model execution failed\n");
 		goto defer;
 	}
+
+	clock_gettime(CLOCK_MONOTONIC, &end); // End timing
+
+	// Calculate elapsed time in milliseconds
+	double elapsed_time = (end.tv_sec - start.tv_sec) * 1000.0 + 
+						  (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+	printf("INFO: Model execution time: %.2f ms\n", elapsed_time);
 
 	/* Save the output. */
 
