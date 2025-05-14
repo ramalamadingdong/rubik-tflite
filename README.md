@@ -7,6 +7,8 @@ It only supports TFLite models which perform image transformations; some example
 ## Building
 
 ```shell
+$ git clone https://github.com/dspeyrer/rubik-tflite.git
+$ cd rubik-tflite
 $ cmake -B build
 $ cmake --build build
 ```
@@ -21,6 +23,28 @@ Supported input formats: JPEG, PNG, TGA, BMP, PSD, GIF, HDR, PIC, and PNM.
 
 Supported output formats: PNG.
 
+## Example
+
+Using a model like https://aihub.qualcomm.com/models/real_esrgan_general_x4v3 and an input image like this one:
+
+`examples/input.png`
+
+![](examples/input.png)
+
+The executable can be invoked with these inputs...
+
+```
+$ build/tflite_demo real_esrgan_general_x4v3.tflite examples/input.png examples/output.png
+```
+
+...and will produce an output like this:
+
+`examples/output.png`
+
+![](examples/output.png)
+
 ## License
 
 This project is licensed under the MIT License.
+
+The example image can be found at https://commons.wikimedia.org/wiki/File:PNG_transparency_demonstration_1.png.
