@@ -25,7 +25,7 @@ Supported output formats: PNG.
 
 ## Example
 
-Using a model like https://aihub.qualcomm.com/models/real_esrgan_general_x4v3 and an input image like this one:
+Using a model like https://aihub.qualcomm.com/models/real_esrgan_x4plus and an input image like this one:
 
 `examples/input.png`
 
@@ -34,7 +34,7 @@ Using a model like https://aihub.qualcomm.com/models/real_esrgan_general_x4v3 an
 The executable can be invoked with these inputs...
 
 ```
-$ build/tflite_demo real_esrgan_general_x4v3.tflite examples/input.png examples/output.png
+$ build/tflite_demo real_esrgan_x4plus.tflite examples/input.png examples/output.png
 ```
 
 ...and will produce an output like this:
