@@ -45,12 +45,16 @@ def main():
             delegate_options = {
                 'backend_type': 'htp'  # Using HTP backend as in the C version
             }
-            delegate = tf.lite.load_delegate('libQnnTFLiteDelegate.so', delegate_options)
-            interpreter.modify_graph_with_delegate(delegate)
+            delegate = tf.lite.experimental.load_delegate('libQnnTFLiteDelegate.so', delegate_options)
+            interpreter = tf.lite.Interpreter(
+                model_path=args.model,
+                experimental_delegates=[delegate]
+            )
             print("INFO: Loaded QNN delegate with HTP backend")
         except Exception as e:
             print(f"WARNING: Failed to load QNN delegate: {e}")
             print("INFO: Continuing without QNN delegate")
+            interpreter = tf.lite.Interpreter(model_path=args.model)
         
         interpreter.allocate_tensors()
     except Exception as e:

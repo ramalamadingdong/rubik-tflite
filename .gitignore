@@ -1,3 +1,5 @@
 build/
 esrgan.tflite
 python.zip
+python/python
+real_esrgan_general_x4v3-real-esrgan-general-x4v3-w8a8.tflite
