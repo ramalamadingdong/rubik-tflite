@@ -4,8 +4,15 @@ This demo calls TFLite using the libQnn delegate, loading it as an external dele
 
 It only supports TFLite models which perform image transformations; some examples of such models can be found at https://aihub.qualcomm.com/models. When it invokes the model, this demo loads input images and writes output images to and from the filesystem.
 
-## Building
+## Installing IM SDK 
 
+```shell
+$ sudo apt-get update
+$ sudo add-apt-repository ppa:ubuntu-qcom-iot/qcom-noble-ppa
+$ sudo apt install gstreamer1.0-qcom-sample-apps qcom-sensors-test-apps tensorflow-qcom
+```
+
+## Building
 ### C:
 ```shell
 $ cd c
