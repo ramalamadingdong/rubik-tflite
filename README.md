@@ -7,35 +7,35 @@ It only supports TFLite models which perform image transformations; some example
 ## Installing IM SDK 
 
 ```shell
-$ sudo apt-get update
-$ sudo add-apt-repository ppa:ubuntu-qcom-iot/qcom-noble-ppa
-$ sudo apt install gstreamer1.0-qcom-sample-apps qcom-sensors-test-apps tensorflow-qcom
+sudo apt-get update
+sudo add-apt-repository ppa:carmel-team/noble-release -login
+sudo apt install gstreamer1.0-qcom-sample-apps qcom-sensors-test-apps tensorflow-qcom
 ```
 
 ## Building
 ### C:
 ```shell
-$ cd c
-$ cmake -B build
-$ cmake --build build
+cd c
+cmake -B build
+cmake --build build
 ```
 ### Python:
 ```shell
-$ cd python
-$ pip install -r requirments.txt
+cd python
+pip install -r requirments.txt
 ```
 
 ## Usage
 
 ###  C:
 ```shell
-$ cd c
-$ build/tflite_demo <model.tflite> <input.png> <output.png>
+cd c
+build/tflite_demo <model.tflite> <input.png> <output.png>
 ```
 ### Python:
 ```shell
-$ cd python
-$ python3 tflite_demo.py <model.tflite> <input.png> <output.png>
+cd python
+python3 tflite_demo.py <model.tflite> <input.png> <output.png>
 ```
 
 Supported input formats: JPEG, PNG, TGA, BMP, PSD, GIF, HDR, PIC, and PNM.
@@ -53,7 +53,7 @@ Using a model like https://aihub.qualcomm.com/models/real_esrgan_x4plus and an i
 The executable can be invoked with these inputs...
 
 ```
-$ build/tflite_demo real_esrgan_x4plus.tflite examples/input.png examples/output.png
+build/tflite_demo real_esrgan_x4plus.tflite examples/input.png examples/output.png
 ```
 
 ...and will produce an output like this:
